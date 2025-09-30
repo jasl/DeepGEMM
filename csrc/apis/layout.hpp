@@ -23,7 +23,7 @@ static torch::Tensor transform_sf_into_required_layout(const torch::Tensor& sf,
         return get_mn_major_tma_aligned_tensor(sf);
 
     // (FP32, 1, 128) on SM100: transform to (INT, 1, 128), TMA-aligned and MN-major
-    if (sf.scalar_type() == torch::kFloat and gran_mn == 1 and gran_k == 128 and arch_major == 10) {
+    if (sf.scalar_type() == torch::kFloat and gran_mn == 1 and gran_k == 128 and (arch_major == 10 or arch_major == 11)) {
         DG_HOST_ASSERT(not disable_ue8m0_cast);
         return get_mn_major_tma_aligned_packed_ue8m0_tensor(sf);
     }
@@ -33,14 +33,14 @@ static torch::Tensor transform_sf_into_required_layout(const torch::Tensor& sf,
         return check_sf_layout(sf, mn, k, gran_mn, gran_k, num_groups, false, true, torch::kFloat);
 
     // (FP32, 128, 128) on SM100: transform to (INT, 1, 128), TMA-aligned and MN-major
-    if (sf.scalar_type() == torch::kFloat and gran_mn == 128 and gran_k == 128 and arch_major == 10) {
+    if (sf.scalar_type() == torch::kFloat and gran_mn == 128 and gran_k == 128 and (arch_major == 10 or arch_major == 11)) {
         DG_HOST_ASSERT(not disable_ue8m0_cast);
         const auto& broadcasted = sf.index_select(-2, torch::arange(mn, at::TensorOptions().device(sf.device())).floor_divide_(128));
         return get_mn_major_tma_aligned_packed_ue8m0_tensor(broadcasted);
     }
 
     // (INT, 1, 128) on SM100: transform to TMA-aligned and MN-major
-    if (sf.scalar_type() == torch::kInt and gran_mn == 1 and gran_k == 128 and arch_major == 10)
+    if (sf.scalar_type() == torch::kInt and gran_mn == 1 and gran_k == 128 and (arch_major == 10 or arch_major == 11))
         return check_sf_layout(sf, mn, k, gran_mn, gran_k, num_groups, true, false, torch::kInt);
 
     DG_HOST_UNREACHABLE("Unknown SF transformation");
@@ -59,11 +59,11 @@ static torch::Tensor transform_k_grouped_sf_into_required_layout(const torch::Te
         return get_mn_major_tma_aligned_tensor(sf);
 
     // FP32 on SM100
-    if (sf.scalar_type() == torch::kFloat and arch_major == 10)
+    if (sf.scalar_type() == torch::kFloat and (arch_major == 10 or arch_major == 11))
         return get_k_grouped_mn_major_tma_aligned_packed_ue8m0_tensor(sf, ks_tensor, ks);
 
     // INT on SM100
-    if (sf.scalar_type() == torch::kInt and arch_major == 10)
+    if (sf.scalar_type() == torch::kInt and (arch_major == 10 or arch_major == 11))
         DG_HOST_UNREACHABLE("Unimplemented");
 
     DG_HOST_UNREACHABLE("Unknown cases");

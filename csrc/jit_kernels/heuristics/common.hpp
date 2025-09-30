@@ -281,9 +281,11 @@ static GemmConfig get_best_config(const GemmType& gemm_type, const KernelType& k
         .thread_config = ArchSpec::get_thread_config(kernel_type, best_block_m, best_block_n)
     };
 
-    // Only SM100 BF16 kernels support tensor core control
-    if (config.tc_util < 100)
-        DG_HOST_ASSERT(device_runtime->get_arch_major() == 10 and ab_dtype == torch::kBFloat16);
+    // Only SM100 and SM110 BF16 kernels support tensor core control
+    if (config.tc_util < 100) {
+        const auto& arch_major = device_runtime->get_arch_major();
+        DG_HOST_ASSERT((arch_major == 10 or arch_major == 11) and ab_dtype == torch::kBFloat16);
+    }
 
     // Print configs for the first time
     if (get_env<int>("DG_JIT_DEBUG") or get_env<int>("DG_PRINT_CONFIGS")) {

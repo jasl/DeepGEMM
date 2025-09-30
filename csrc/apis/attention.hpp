@@ -60,9 +60,9 @@ static void fp8_gemm_nt_skip_head_mid(const std::pair<torch::Tensor, torch::Tens
     const auto& epilogue_type = fmt::format("EpilogueHeadSplits<{}, {}, {}>", left, mid, right);
     if (arch_major == 9 and sfa.scalar_type() == torch::kFloat and std::get<1>(recipe.value()) != 1) {
         sm90_fp8_gemm_1d2d(a.first, sfa, b.first, sfb, std::nullopt, d, m, n, k, major_a, major_b, compiled_dims, epilogue_type);
-    } else if (arch_major == 10 and sfa.scalar_type() == torch::kInt) {
+    } else if ((arch_major == 10 or arch_major == 11) and sfa.scalar_type() == torch::kInt) {
         sm100_fp8_gemm_1d1d(a.first, sfa, b.first, sfb, std::nullopt, d, m, n, k, major_a, major_b, compiled_dims, epilogue_type);
-    } else if (arch_major == 10 and sfa.scalar_type() == torch::kFloat) {
+    } else if ((arch_major == 10 or arch_major == 11) and sfa.scalar_type() == torch::kFloat) {
         sm100_fp8_gemm_1d2d(a.first, sfa, b.first, sfb, std::nullopt, d, m, n, k, major_a, major_b, compiled_dims, epilogue_type);
     } else {
         DG_HOST_UNREACHABLE("Unsupported architecture or scaling factor types");
@@ -108,7 +108,7 @@ static torch::Tensor fp8_mqa_logits(const torch::Tensor& q,
 
     // Dispatch implementation
     const auto& arch_major = device_runtime->get_arch_major();
-    if (arch_major == 9 or arch_major == 10) {
+    if (arch_major == 9 or arch_major == 10 or arch_major == 11) {
         smxx_fp8_mqa_logits(q, kv.first, kv.second, weights, cu_seq_len_k_start, cu_seq_len_k_end, logits,
                             seq_len, seq_len_kv, aligned_seq_len_kv, num_heads, head_dim, seq_len_alignment);
     } else {
@@ -130,7 +130,7 @@ static torch::Tensor get_paged_mqa_logits_metadata(const torch::Tensor& context_
 
     // Dispatch implementation
     const auto& arch_major = device_runtime->get_arch_major();
-    if (arch_major == 9 or arch_major == 10) {
+    if (arch_major == 9 or arch_major == 10 or arch_major == 11) {
         smxx_paged_mqa_logits_metadata(context_lens, schedule_metadata, batch_size, block_kv, num_sms);
     } else {
         DG_HOST_UNREACHABLE("Unsupported architecture");
@@ -205,7 +205,7 @@ static torch::Tensor fp8_paged_mqa_logits(const torch::Tensor& q,
 
     // Dispatch implementation
     const auto& arch_major = device_runtime->get_arch_major();
-    if (arch_major == 9 or arch_major == 10) {
+    if (arch_major == 9 or arch_major == 10 or arch_major == 11) {
         smxx_fp8_paged_mqa_logits(q, kv_cache, kv_cache_scales, weights, context_lens, logits, block_table, schedule_meta,
                                   batch_size, next_n, num_heads, head_dim, num_kv_blocks, block_kv,
                                   kv_cache_stride_bytes, aligned_max_context_len, block_table_stride, num_sms, num_math_warp_groups);

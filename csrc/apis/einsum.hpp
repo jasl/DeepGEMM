@@ -44,7 +44,7 @@ static void bmk_bnk_mn(const torch::Tensor& a, const torch::Tensor& b, const tor
     const auto& arch_major = device_runtime->get_arch_major();
     if (arch_major == 9) {
         sm90_bmn_bnk_mn_gemm(a, b, d, s, m, n, k);
-    } else if (arch_major == 10) {
+    } else if (arch_major == 10 or arch_major == 11) {
         sm100_bmn_bnk_mn_gemm(a, b, d, s, m, n, k);
     } else {
         DG_HOST_UNREACHABLE("Unsupported architecture");
